@@ -21,11 +21,12 @@ func (this *Shredder) worker(textChannel chan string) {
 	this.stopped = false
 	for text := range textChannel {
 		//fmt.Println("doclen:"+strconv.Itoa(len(text)))
-		this.termCount = this.termCount + len(text)
-		this.documentCount++
-		tmp := strings.Split(strings.Replace(strings.ToLower(text), "\n", "", -1), " ")
 
+		this.documentCount++
+		tmp := strings.Split(ExtractContentFromWikitext(text), " ")
+		this.termCount = this.termCount + len(tmp)
 		for _, tok := range tmp {
+			//fmt.Println(tok)
 			this.wordStats.setTF(tok, this.wordStats.TF(tok)+1)
 			//this.wordStats.stats[tok].idf = this.wordStats.stats[tok].idf + 1
 		}

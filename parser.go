@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"os"
 	//"fmt"
+	//"strconv"
 )
 
 type redirect struct {
@@ -17,7 +18,7 @@ type wpPage struct {
 }
 
 func validPage(p wpPage) bool {
-	return p.Redirect.Title == "" && (len(p.Title) > len("Categoria:") && p.Title[:len("Categoria:")] != "Categoria:")
+	return p.Redirect.Title == "" && !(len(p.Title) >= len("Categoria:") && p.Title[:len("Categoria:")] == "Categoria:")
 }
 
 func parseFile(filename string, textChannel chan string) {
@@ -31,8 +32,9 @@ func parseFile(filename string, textChannel chan string) {
 		case xml.StartElement:
 			if element.Name.Local == "page" {
 				var p wpPage
-				//fmt.Println(p.Title)
+
 				decoder.DecodeElement(&p, &element)
+				//fmt.Println("title:"+p.Title+" valid:"+strconv.FormatBool(validPage(p)))
 				if validPage(p) {
 					textChannel <- p.Text
 				}
