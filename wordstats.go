@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"time"
+	"math"
 )
 
 type Language int
@@ -17,7 +18,6 @@ const (
 
 type termStats struct {
 	tf  int
-	idf float64
 	df int
 }
 
@@ -29,7 +29,7 @@ type WordStats struct {
 func (this *WordStats) dumpToFile(fileName string) {
 	f, _ := os.Create(fileName)
 	for k, _ := range this.stats {
-		f.WriteString(k + ";" + strconv.Itoa(this.TF(k)) + ";" + strconv.Itoa(this.DF(k)) + ";" + fmt.Sprintf("%.6f", this.IDF(k)) + "\n")
+		f.WriteString(k + ";" + strconv.Itoa(this.TF(k)) + ";" + strconv.Itoa(this.DF(k)) + ";" + fmt.Sprintf("%.6f", this.IDF(k)) + ";" + fmt.Sprintf("%.6f", this.TFIDF(k)) + "\n")
 	}
 	f.Close()
 }
@@ -54,6 +54,10 @@ func NewWordStats() *WordStats {
 	return &WordStats{0, make(map[string]*termStats)}
 }
 
+func (this *WordStats) Load(filepath string) {
+	//TODO
+}
+
 func (this *WordStats) TF(term string) int {
 	if val, ok := this.stats[term]; ok {
 		return val.tf
@@ -70,16 +74,20 @@ func (this *WordStats) DF(term string) int {
 	}
 }
 
-func (this *WordStats) IDF(term string) float32 {
-	//TODO
-	return 0.0
+func (this *WordStats) IDF(term string) float64 {
+	return math.Log(float64(this.totalDocs) / float64(this.DF(term)))
 }
+
+func (this *WordStats) TFIDF(term string) float64 {
+	return float64(this.TF(term)) * this.IDF(term)
+}
+
 
 func (this *WordStats) setTF(key string, tf int) {
 	if val, ok := this.stats[key]; ok {
 		val.tf = tf
 	} else {
-		this.stats[key] = &termStats{tf, 0.0, 0}
+		this.stats[key] = &termStats{tf,  0}
 	}
 }
 
@@ -87,6 +95,6 @@ func (this *WordStats) setDF(key string, df int) {
 	if val, ok := this.stats[key]; ok {
 		val.df = df
 	} else {
-		this.stats[key] = &termStats{0, 0.0, df}
+		this.stats[key] = &termStats{0, df}
 	}
 }
