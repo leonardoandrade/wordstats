@@ -1,9 +1,10 @@
 package wordstats
 
 import (
-	"fmt"
-	"strconv"
+	//"fmt"
+	//"strconv"
 	"strings"
+	. "sync"
 )
 
 type Shredder struct {
@@ -11,10 +12,11 @@ type Shredder struct {
 	documentCount int
 	stopped       bool
 	wordStats     *WordStats
+	m *Mutex
 }
 
 func newShredder(wordStats *WordStats) *Shredder {
-	return &Shredder{0, 0, true, wordStats}
+	return &Shredder{0, 0, true, wordStats, &Mutex{}}
 }
 
 func (this *Shredder) worker(textChannel chan string) {
@@ -32,12 +34,18 @@ func (this *Shredder) worker(textChannel chan string) {
 		for _, tok := range tmp {
 			//fmt.Println(tok)
 			termSet[tok] = true
-			this.wordStats.setTF(tok, this.wordStats.TF(tok)+1)
+			this.m.Lock()
+			this.wordStats.setTC(tok, this.wordStats.TC(tok)+1)
+			this.m.Unlock()
 		}
 
 		for k, _ := range termSet {
-			this.wordStats.setDF(k, this.wordStats.DF(k)+1)
+			this.m.Lock()
+			this.wordStats.setDC(k, this.wordStats.DC(k)+1)
+			this.m.Unlock()
 		}
+
+
 	}
 	this.stopped = true
 }
@@ -48,9 +56,10 @@ func (this *Shredder) Run(textChannel chan string, numThreads int) {
 	}
 }
 
-func (this *Shredder) Report() {
-	fmt.Println("docs: " + strconv.Itoa(this.documentCount) + " terms: " + strconv.Itoa(this.termCount))
+func (this *Shredder) TotalDocsAndTermsProcessed() (int, int) {
+	return this.documentCount, this.termCount
 }
+
 
 func (this *Shredder) Stopped() bool {
 	return this.stopped

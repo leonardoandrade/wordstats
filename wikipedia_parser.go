@@ -3,8 +3,8 @@ package wordstats
 import (
 	"encoding/xml"
 	"os"
-	//"fmt"
-	//"strconv"
+	"regexp"
+	"strings"
 )
 
 type redirect struct {
@@ -18,7 +18,7 @@ type wpPage struct {
 }
 
 func validPage(p wpPage) bool {
-	return p.Redirect.Title == "" && !(len(p.Title) >= len("Categoria:") && p.Title[:len("Categoria:")] == "Categoria:")
+	return p.Redirect.Title == "" && regexp.MustCompile("[a-z]:.*").MatchString(strings.ToLower(p.Title)) == false
 }
 
 func parseFile(filename string, textChannel chan string) {
@@ -34,7 +34,6 @@ func parseFile(filename string, textChannel chan string) {
 				var p wpPage
 
 				decoder.DecodeElement(&p, &element)
-				//fmt.Println("title:"+p.Title+" valid:"+strconv.FormatBool(validPage(p)))
 				if validPage(p) {
 					textChannel <- p.Text
 				}
