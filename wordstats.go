@@ -9,10 +9,11 @@ import (
 	"os"
 	"strconv"
 	"time"
-	//"math"
+	"math"
 	"bufio"
-	"io"
+	//"io"
 	"runtime"
+	//"strings"
 	"strings"
 )
 
@@ -26,7 +27,10 @@ const (
 	EN
 )
 
-const TC_TRESHOLD = 1000
+const (
+	TC_TRESHOLD = 500
+	MAX_PROCS   = 3
+)
 
 type termStats struct {
 	tc int // term count
@@ -39,7 +43,7 @@ type WordStats struct {
 }
 
 func ParseWikipedia(fileName string, language Language, outputTermFile string) {
-	runtime.GOMAXPROCS(3)
+	runtime.GOMAXPROCS(MAX_PROCS)
 
 	textChannel := make(chan string)
 	go parseFile(fileName, textChannel)
@@ -76,17 +80,28 @@ func (this *WordStats) Load(filepath string) {
 	if err != nil {
 		panic("cannot read file " + filepath)
 	}
-	r := bufio.NewReader(f)
-	firstLine, _, err := r.ReadLine()
-	if err != nil {
-		panic("cannot read file " + filepath)
-	}
+	scanner := bufio.NewScanner(f)
+	scanner.Scan()
+
+	firstLine := scanner.Text()
 
 	this.totalDocs, _ = strconv.Atoi((string)(firstLine))
-	for line, _, err := r.ReadLine(); err != io.EOF; {
-		tok := strings.Split((string)(line), ";")
-		tc, _ := strconv.Atoi(tok[1])
-		dc, _ := strconv.Atoi(tok[2])
+	count := 1
+	for scanner.Scan() {
+		count = count + 1
+		tok := strings.Split(scanner.Text(), ";")
+		if len(tok) < 3 {
+			panic("cannot parse line '"+scanner.Text()+"' in position "+strconv.Itoa(count))
+		}
+		tc, err :=  strconv.Atoi(tok[1])
+		if err != nil {
+			panic("cannot convert value " + tok[1] + " to int")
+		}
+		dc, err :=  strconv.Atoi(tok[2])
+		if err != nil {
+			panic("cannot convert value " + tok[2] + " to int")
+		}
+
 		this.setTC(tok[0], tc)
 		this.setDC(tok[0], dc)
 	}
@@ -140,13 +155,12 @@ func (this *WordStats) setDC(term string, dc int) {
 	}
 }
 
-/*
+func (this *WordStats) Exists(term string) bool {
+	_, ok := this.stats[term]
+	return ok
+}
+
 func (this *WordStats) IDF(term string) float64 {
-	return math.Log(float64(this.totalDocs) / float64(this.DF(term)))
+	return math.Log(float64(this.totalDocs) / float64(this.DC(term)))
 }
 
-
-func (this *WordStats) TFIDF(term string) float64 {
-	return float64(this.TF(term)) * this.IDF(term)
-}
-*/
