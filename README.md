@@ -68,3 +68,10 @@ func main() {
 ```
 
 The process was optimized to scale-up in a SMP machine, and explores the parallel programming capabilities of Go. This is opposed to a more common scale-out approach using map-reducers such as Hadoop.
+
+
+Future Work
+-----------
+
+1. Implement parser/lexer for Wikitex, for better word extraction
+2. Tests....
