@@ -16,14 +16,19 @@ type wpPage struct {
 	Text  string   `xml:"revision>text"`
 	Redirect redirect `xml:"redirect"`
 }
-
+/*
+if a page is a redirect or a special page, such as "category:" or "anexo:", is not valid for indexing
+ */
 func validPage(p wpPage) bool {
 	return p.Redirect.Title == "" && regexp.MustCompile("[a-z]:.*").MatchString(strings.ToLower(p.Title)) == false
 }
 
 func parseFile(filename string, textChannel chan string) {
 
-	f, _ := os.Open(filename)
+	f, err := os.Open(filename)
+	if err != nil {
+		panic("cannot open file '"+filename+"'")
+	}
 	decoder := xml.NewDecoder(f)
 
 	for tok, _ := decoder.Token(); tok!=nil; tok,_ = decoder.Token(){

@@ -32,11 +32,9 @@ func ExtractContentFromWikitext(input string) (string) {
 	ret = tags_to_remove.ReplaceAllString(ret, " ")
 	ret = tags_to_remove.ReplaceAllString(ret, " ")
 	ret = tags_to_remove.ReplaceAllString(ret, " ")
-
 	ret = tables.ReplaceAllString(ret, " ")
 	ret = tables.ReplaceAllString(ret, " ")
 	ret = tables.ReplaceAllString(ret, " ")
-
 	ret = link_markers.ReplaceAllString(ret, " ")
 	ret = header_markers.ReplaceAllString(ret, " ")
 	return ret

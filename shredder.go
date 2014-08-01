@@ -1,8 +1,6 @@
 package wordstats
 
 import (
-	//"fmt"
-	//"strconv"
 	"strings"
 	. "sync"
 )
