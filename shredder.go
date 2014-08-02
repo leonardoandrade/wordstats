@@ -10,54 +10,46 @@ type Shredder struct {
 	documentCount int
 	stopped       bool
 	wordStats     *WordStats
-	m *Mutex
+	m             *Mutex
 }
+
+type termCounts map[string]int
 
 func newShredder(wordStats *WordStats) *Shredder {
 	return &Shredder{0, 0, true, wordStats, &Mutex{}}
 }
 
-func (this *Shredder) worker(textChannel chan string) {
+func (this *Shredder) worker(textChannel chan string, wordCountChannel chan termCounts) {
 	this.stopped = false
 	for text := range textChannel {
-		//fmt.Println("doclen:"+strconv.Itoa(len(text)))
-
 		this.documentCount++
-		this.wordStats.totalDocs=this.documentCount
+		this.wordStats.totalDocs = this.documentCount
 		tmp := strings.Split(ExtractContentFromWikitext(text), " ")
 		this.termCount = this.termCount + len(tmp)
 
-		termSet := make(map[string]bool)
-
+		termCounts := make(map[string]int)
 		for _, tok := range tmp {
-			//fmt.Println(tok)
-			termSet[tok] = true
-			this.m.Lock()
-			this.wordStats.setTC(tok, this.wordStats.TC(tok)+1)
-			this.m.Unlock()
+			termCounts[tok] = termCounts[tok] + 1
 		}
+		wordCountChannel <- termCounts
 
-		for k, _ := range termSet {
-			this.m.Lock()
-			this.wordStats.setDC(k, this.wordStats.DC(k)+1)
-			this.m.Unlock()
+		if this.wordStats.totalDocs > 5000 {
+			break
 		}
-
 
 	}
 	this.stopped = true
 }
 
-func (this *Shredder) Run(textChannel chan string, numThreads int) {
+func (this *Shredder) Run(textChannel chan string, wordCountChannel chan termCounts, numThreads int) {
 	for i := 0; i < numThreads; i++ {
-		go this.worker(textChannel)
+		go this.worker(textChannel, wordCountChannel)
 	}
 }
 
 func (this *Shredder) TotalDocsAndTermsProcessed() (int, int) {
 	return this.documentCount, this.termCount
 }
-
 
 func (this *Shredder) Stopped() bool {
 	return this.stopped

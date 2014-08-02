@@ -5,12 +5,12 @@
 package wordstats
 
 import (
+	"bufio"
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"time"
-	"math"
-	"bufio"
 	//"io"
 	"runtime"
 	//"strings"
@@ -29,7 +29,7 @@ const (
 
 const (
 	TC_TRESHOLD = 500
-	MAX_PROCS   = 3
+	MAX_PROCS   = 9
 )
 
 type termStats struct {
@@ -46,16 +46,28 @@ func ParseWikipedia(fileName string, language Language, outputTermFile string) {
 	runtime.GOMAXPROCS(MAX_PROCS)
 
 	textChannel := make(chan string)
+	wordCountChannel := make(chan termCounts)
+
 	go parseFile(fileName, textChannel)
 	ws := NewWordStats()
 	shredder := newShredder(ws)
-	shredder.Run(textChannel, 4)
+	shredder.Run(textChannel, wordCountChannel, 4)
+
+	//collector goroutine
+	go func() {
+		for tc := range wordCountChannel {
+			for term, ct := range tc {
+				ws.setTC(term, ws.TC(term)+ct)
+				ws.setDC(term, ws.DC(term)+1)
+			}
+		}
+	}()
+
 	start := time.Now()
 	for {
 		time.Sleep(2 * time.Second)
 		if REPORT {
 			docs, terms := shredder.TotalDocsAndTermsProcessed()
-
 			var elapsed time.Duration = time.Since(start)
 			var kTermsPerSecond int = int((float64(terms) / elapsed.Seconds()) / 1000)
 			fmt.Printf("%d docs, %d terms processed, %dk terms per second \n", docs, terms, kTermsPerSecond)
@@ -91,13 +103,13 @@ func (this *WordStats) Load(filepath string) {
 		count = count + 1
 		tok := strings.Split(scanner.Text(), ";")
 		if len(tok) < 3 {
-			panic("cannot parse line '"+scanner.Text()+"' in position "+strconv.Itoa(count))
+			panic("cannot parse line '" + scanner.Text() + "' in position " + strconv.Itoa(count))
 		}
-		tc, err :=  strconv.Atoi(tok[1])
+		tc, err := strconv.Atoi(tok[1])
 		if err != nil {
 			panic("cannot convert value " + tok[1] + " to int")
 		}
-		dc, err :=  strconv.Atoi(tok[2])
+		dc, err := strconv.Atoi(tok[2])
 		if err != nil {
 			panic("cannot convert value " + tok[2] + " to int")
 		}
@@ -163,4 +175,3 @@ func (this *WordStats) Exists(term string) bool {
 func (this *WordStats) IDF(term string) float64 {
 	return math.Log(float64(this.totalDocs) / float64(this.DC(term)))
 }
-
